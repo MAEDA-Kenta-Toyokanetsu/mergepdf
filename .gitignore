@@ -8,10 +8,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# --- Python files ---
-scripts/python0313/*
-scripts/site-packages/*
-
 # --- Logs ---
 *.log
 scripts/logs/
