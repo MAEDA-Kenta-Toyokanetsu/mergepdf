@@ -1,0 +1,64 @@
+name: release-zip (Windows only)
+
+on:
+  push:
+    tags:
+      - 'v0.1.0'
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute version
+        id: v
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}".Trim()
+          $ver = $tag.TrimStart('v')
+          echo "ver=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Make ZIP (Windows PowerShell)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $ver   = "${{ steps.v.outputs.ver }}"
+          $name  = "pdfmerge-$ver"
+          $dist  = "dist"; New-Item -Force -ItemType Directory $dist | Out-Null
+          $zip   = Join-Path $dist "$name.zip"
+
+          # 一時ステージング
+          $stg = Join-Path $env:TEMP $name
+          Remove-Item -Recurse -Force $stg -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory $stg | Out-Null
+
+          # 必要物のみコピー
+          robocopy . $stg merge.bat README.md Readme.md readme.md /NFL /NDL /NJH /NJS /NC /NS >$null
+          robocopy scripts $("$stg\scripts") merge.py /S /NFL /NDL /NJH /NJS /NC /NS >$null
+          robocopy scripts\python0313 $("$stg\scripts\python0313") * /S /NFL /NDL /NJH /NJS /NC /NS >$null
+          robocopy scripts\site-packages $("$stg\scripts\site-packages") * /S /NFL /NDL /NJH /NJS /NC /NS >$null
+
+          # 除外（ログ・結合成果物・メタ）
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue (Join-Path $stg "scripts\logs")
+          Get-ChildItem -Path $stg -Recurse -Filter "merged*.pdf" | Remove-Item -Force -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue (Join-Path $stg ".git")
+
+          # ZIP作成
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path (Join-Path $stg '*') -DestinationPath $zip
+
+          # SHA256
+          Get-FileHash $zip -Algorithm SHA256 | ForEach-Object {
+            $_.Hash + "  " + (Split-Path -Leaf $zip)
+          } | Set-Content (Join-Path $dist "$name.sha256")
+
+      - name: Publish GitHub Release (Windows)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.zip
+            dist/*.sha256
+          generate_release_notes: true
