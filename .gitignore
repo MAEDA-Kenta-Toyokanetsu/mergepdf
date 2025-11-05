@@ -1,0 +1,38 @@
+# --- OS / Editor artifacts ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Python cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Python files ---
+scripts/python0313/*
+scripts/site-packages/*
+
+# --- Logs ---
+*.log
+scripts/logs/
+logs/
+
+# --- Build / Output (PDF merge results) ---
+*.pdf
+merged.pdf
+merged_*.pdf
+
+# --- Temp files ---
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# --- Virtual envs (使わない想定だが保険で) ---
+.venv/
+venv/
+env/
+
+# --- IDE settings ---
+.vscode/
+.idea/
